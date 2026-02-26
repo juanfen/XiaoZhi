@@ -2,7 +2,14 @@ import uuid
 import re
 from typing import List, Dict
 from datetime import datetime
+import os
 
+import json
+import sqlite3
+from dataclasses import dataclass
+from typing import List, Dict, Any, Optional, Tuple
+from config.logger import setup_logging
+logger = setup_logging()
 
 class Message:
     def __init__(
@@ -59,8 +66,9 @@ class Dialogue:
         else:
             self.put(Message(role="system", content=new_content))
 
+    # 记忆修改 message拼接 用户画像+长期记忆片段+摘要+短期上下文
     def get_llm_dialogue_with_memory(
-        self, memory_str: str = None, voiceprint_config: dict = None
+        self, memory_str: str = None, voiceprint_config: dict = None,user_name = None
     ) -> List[Dict[str, str]]:
         # 构建对话
         dialogue = []
@@ -70,13 +78,62 @@ class Dialogue:
             (msg for msg in self.dialogue if msg.role == "system"), None
         )
 
+        # 增加摘要读取
+        from pathlib import Path
+        base = Path("/home/wutianxin@kemande.cn/xiaozhi-esp32-server-updata/main/summary")
+        base_2 = Path("/mnt/Data/chenjiahui/User")
+        file_path = base / f"{user_name}对话摘要.txt"
+        summary_text = ""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                summary_text = f.read().strip()
+        except FileNotFoundError:
+            print(f"找不到摘要文件：{file_path}")
+        except Exception as e:
+            print(f"读取摘要文件出错：{e}")
+
+        # 增加上下文、用户画像读取
+        file_path_1 = base / f"{user_name}近期上下文.txt"
+        file_path_2 = base_2 / f"{user_name}用户画像.txt"
+        recent_text = ""
+        try:
+            with open(file_path_1, 'r', encoding='utf-8') as f:
+                recent_text = f.read().strip()
+        except FileNotFoundError:
+            print(f"找不到上下文文件：{file_path_1}")
+        except Exception as e:
+            print(f"读取上下文文件出错：{e}")
+        recent_text_2 = ""
+        try:
+            with open(file_path_2, 'r', encoding='utf-8') as f:
+                recent_text_2 = f.read().strip()
+        except FileNotFoundError:
+            print(f"找不到用户文件：{file_path_2}")
+        except Exception as e:
+            print(f"读取用户文件出错：{e}")
+
+        from zoneinfo import ZoneInfo
+        current_time = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
+        print(current_time)
         if system_message:
-            # 基础系统提示
-            enhanced_system_prompt = system_message.content
-            # 替换时间占位符
-            enhanced_system_prompt = enhanced_system_prompt.replace(
-                "{{current_time}}", datetime.now().strftime("%H:%M")
+            enhanced_system_prompt = (
+                f"{system_message.content}"
+                f"以下是{user_name}相关信息，{recent_text_2}，当没有明确聊天话题时，可根据其中内容对用户展开聊天与回复。"
+                f"以下是用户的历史记忆总结{summary_text}{memory_str}。"
+                f"以下是近期对话上下文：{recent_text}"
+                f"以下是当前对话时间：{current_time}"
+
             )
+            dialogue.append({"role": "system", "content": enhanced_system_prompt})
+            TAG = __name__
+            logger.bind(tag=TAG).info("message拼接")
+        # if system_message:
+        #     # 基础系统提示
+        #     enhanced_system_prompt = system_message.content
+        #     # 替换时间占位符
+        #     enhanced_system_prompt = enhanced_system_prompt.replace(
+        #         "{{current_time}}", datetime.now().strftime("%H:%M")
+        #     )
 
             # 添加说话人个性化描述
             try:
@@ -100,19 +157,23 @@ class Dialogue:
                 # 配置读取失败时忽略错误，不影响其他功能
                 pass
 
-            # 使用正则表达式匹配 <memory> 标签，不管中间有什么内容
-            if memory_str is not None:
-                enhanced_system_prompt = re.sub(
-                    r"<memory>.*?</memory>",
-                    f"<memory>\n{memory_str}\n</memory>",
-                    enhanced_system_prompt,
-                    flags=re.DOTALL,
-                )
-            dialogue.append({"role": "system", "content": enhanced_system_prompt})
-
+            # # 使用正则表达式匹配 <memory> 标签，不管中间有什么内容
+            # if memory_str is not None:
+            #     enhanced_system_prompt = re.sub(
+            #         r"<memory>.*?</memory>",
+            #         f"<memory>\n{memory_str}\n</memory>",
+            #         enhanced_system_prompt,
+            #         flags=re.DOTALL,
+            #     )
+            # dialogue.append({"role": "system", "content": enhanced_system_prompt})
         # 添加用户和助手的对话
         for m in self.dialogue:
             if m.role != "system":  # 跳过原始的系统消息
                 self.getMessages(m, dialogue)
-
+        # print("message:",dialogue)
+        logger.bind(tag=TAG).info("响应开始")
         return dialogue
+
+
+
+

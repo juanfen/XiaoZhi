@@ -120,7 +120,7 @@ class ASRProviderBase(ABC):
                     try:
                         # 使用连接的声纹识别提供者
                         result = loop.run_until_complete(
-                            conn.voiceprint_provider.identify_speaker(wav_data, conn.session_id)
+                            conn.voiceprint_provider.identify_speaker(conn, wav_data, conn.session_id)
                         )
                         return result
                     finally:

@@ -85,9 +85,9 @@ async def checkWakeupWords(conn, text):
     if not response or not response.get("file_path"):
         response = {
             "voice": "default",
-            "file_path": "config/assets/wakeup_words.wav",
+            "file_path": "config/assets/wakeup_words.mp3",
             "time": 0,
-            "text": "哈啰啊，我是小智啦，声音好听的台湾女孩一枚，超开心认识你耶，最近在忙啥，别忘了给我来点有趣的料哦，我超爱听八卦的啦",
+            "text": "你好，我是来自扬州科曼德的小德",
         }
 
     # 获取音频数据
@@ -133,11 +133,14 @@ async def wakeupWordsResponse(conn):
 
         # 生成TTS音频
         tts_result = await asyncio.to_thread(conn.tts.to_tts, result)
+        conn.logger.bind(tag=TAG).info(f"TTS转换成功: {result}")
         if not tts_result:
+            conn.logger.bind(tag=TAG).error("TTS转换失败")
             return
 
         # 获取当前音色
         voice = getattr(conn.tts, "voice", "default")
+        conn.logger.bind(tag=TAG).info(f"当前音色: {voice}")
 
         wav_bytes = opus_datas_to_wav_bytes(tts_result, sample_rate=16000)
         file_path = wakeup_words_config.generate_file_path(voice)

@@ -24,7 +24,7 @@ class TTSProvider(TTSProviderBase):
             self.voice = config.get("private_voice")
         else:
             self.voice = config.get("voice", "xiao_he")
-        self.api_url = config.get("api_url", "http://8.138.114.124:11996/tts")
+        self.api_url = config.get("api_url", "http://8.138.114.124:11996/clone_voice")
         self.audio_format = "pcm"
         self.before_stop_play_files = []
 
@@ -117,6 +117,7 @@ class TTSProvider(TTSProviderBase):
     async def text_to_speak(self, text, is_last):
         """流式处理TTS音频，每句只推送一次音频列表"""
         payload = {"text": text, "character": self.voice}
+        print("==================================", text)
 
         frame_bytes = int(
             self.opus_encoder.sample_rate
@@ -128,6 +129,9 @@ class TTSProvider(TTSProviderBase):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(self.api_url, json=payload, timeout=10) as resp:
+                    logger.bind(tag=TAG).info(
+                        f"TTS--------------------------------------------"
+                    )
 
                     if resp.status != 200:
                         logger.bind(tag=TAG).error(
@@ -142,6 +146,7 @@ class TTSProvider(TTSProviderBase):
                     # 处理音频流数据
                     async for chunk in resp.content.iter_any():
                         data = chunk[0] if isinstance(chunk, (list, tuple)) else chunk
+                        # data = (chunk[0] if isinstance(chunk, (list, tuple)) else chunk)[44:]
                         if not data:
                             continue
 
@@ -190,7 +195,7 @@ class TTSProvider(TTSProviderBase):
         start_time = time.time()
         text = MarkdownCleaner.clean_markdown(text)
 
-        payload = {"text": text, "character": self.character}
+        payload = {"text": text, "character": self.voice}
 
         try:
             with requests.post(self.api_url, json=payload, timeout=5) as response:
@@ -233,3 +238,19 @@ class TTSProvider(TTSProviderBase):
         except Exception as e:
             logger.bind(tag=TAG).error(f"TTS请求异常: {e}")
             return []
+
+
+'''
+                    # # debug
+                    # from datetime import datetime
+                    # import wave
+                    # pcm_data = await resp.read()
+                    # fileame = datetime.now().strftime("%Y%m%d%H%M%S")
+                    # with wave.open(os.path.join('/home/wutianxin@kemande.cn/xiaozhi-esp32-server-1212/temp',
+                    #                             f"index_{fileame}.wav"), 'wb') as f:
+                    #     f.setnchannels(1)
+                    #     f.setsampwidth(2)
+                    #     f.setframerate(24000)
+                    #     f.writeframes(pcm_data)
+                    # # debug
+'''
