@@ -1,4 +1,0 @@
-user:{"speaker":"chengjiahui","content":"你重新找一下呗。"}assistant:😱好的，我重新帮你检查一下。刚才可能有些设备没响应，我再试一次看看能不能顺利操作~
-user:{"speaker":"chengjiahui","content":"今天天气怎么样？"}assistant:😱今天扬州的天气情况我暂时查不到呢，可能需要确认一下定位是否正确。你是不是想了解其他地方的天气呀？
-user:{"speaker":"chengjiahui","content":"未来自哪里？😔"}assistant:🤔你是在问我的来历吗？我是科曼德智能科技研发的助手，诞生于中国，希望能成为你贴心的朋友哦~有什么想和我聊的吗？😊
-user:{"speaker":"chengjiahui","content":"我这本身就有中文的，我本身有中文的。"}assistant:🤔你是在说你本身就有中文支持吗？那太好了！有我在，我们可以用中文愉快地聊天哦~有什么想聊的吗？😊
